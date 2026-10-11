@@ -156,4 +156,35 @@ test("shouldRecord: 연습·다시 풀기는 기록 안 함", () => {
   assertEqual(shouldRecord(createGame("practice", "science", items, true)), false);
 });
 
+test("remainingSeconds", () => {
+  assertEqual(remainingSeconds(15000, 0), 15);
+  assertEqual(remainingSeconds(15000, 100), 15);
+  assertEqual(remainingSeconds(15000, 14001), 1);
+  assertEqual(remainingSeconds(15000, 15000), 0);
+  assertEqual(remainingSeconds(15000, 99999), 0);
+});
+
+test("시간 초과는 오답 0점", () => {
+  const g = createGame("speed", "science", buildRound(QUESTIONS, "science"));
+  const r = timeoutCurrent(g);
+  assertEqual(r.correct, false);
+  assertEqual(r.timedOut, true);
+  assertEqual(scoreResult(r), 0);
+});
+
+test("답한 뒤 시간 초과는 무시", () => {
+  const g = createGame("speed", "science", buildRound(QUESTIONS, "science"));
+  answerCurrent(g, g.items[0].correctIndex);
+  assertEqual(timeoutCurrent(g), null);
+  assertEqual(g.results.length, 1);
+  assertEqual(g.results[0].correct, true);
+});
+
+test("시간 초과 뒤 답은 무시", () => {
+  const g = createGame("speed", "science", buildRound(QUESTIONS, "science"));
+  timeoutCurrent(g);
+  assertEqual(answerCurrent(g, g.items[0].correctIndex), null);
+  assertEqual(g.results.length, 1);
+});
+
 out.textContent += `SUMMARY passed=${passed} failed=${failed}\n`;

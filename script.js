@@ -112,6 +112,26 @@ function answerCurrent(game, choiceIndex) {
   return result;
 }
 
+// 스피드 모드: 마감 시각까지 남은 초(올림). 0보다 작아지지 않는다.
+function remainingSeconds(deadline, now) {
+  return Math.max(0, Math.ceil((deadline - now) / 1000));
+}
+
+// 스피드 모드: 시간 초과를 오답으로 기록한다. 이미 답했으면 null.
+function timeoutCurrent(game) {
+  if (game.answered) return null;
+  const result = {
+    questionId: game.items[game.current].id,
+    correct: false,
+    usedHint: false,
+    timedOut: true,
+    chosenIndex: null,
+  };
+  game.results.push(result);
+  game.answered = true;
+  return result;
+}
+
 function nextQuestion(game) {
   if (!game.answered || game.current >= game.items.length - 1) return false;
   game.current++;
@@ -145,6 +165,9 @@ const app = {
   categoryId: null,
   game: null,
 };
+
+// 스피드 모드 타이머. 남은 시간은 마감 시각 기준으로 계산한다.
+const timer = { id: null, deadline: 0 };
 
 // 시작 화면에서 모드 아래에 보여 주는 규칙 한 줄
 const MODE_RULES = {
@@ -216,7 +239,10 @@ function initApp() {
   });
   $("btn-next").addEventListener("click", onNext);
   $("btn-home").addEventListener("click", () => {
-    if (confirm("처음으로 돌아갈까요? 이번 판은 기록되지 않아요.")) showScreen("screen-start");
+    if (confirm("처음으로 돌아갈까요? 이번 판은 기록되지 않아요.")) {
+      stopTimer();
+      showScreen("screen-start");
+    }
   });
   $("btn-again").addEventListener("click", () => startGame(app.modeId, app.categoryId));
   $("btn-result-home").addEventListener("click", () => showScreen("screen-start"));
@@ -269,11 +295,43 @@ function renderQuestion() {
   });
   $("feedback").hidden = true;
   $("btn-next").hidden = true;
+
+  const timed = MODES[g.mode].timeLimit !== null;
+  $("quiz-timer-box").hidden = !timed;
+  if (timed) startTimer();
+}
+
+function startTimer() {
+  stopTimer();
+  const limit = MODES[app.game.mode].timeLimit * 1000;
+  timer.deadline = Date.now() + limit;
+  const tick = () => {
+    const now = Date.now();
+    $("quiz-timer").textContent = remainingSeconds(timer.deadline, now);
+    $("quiz-timer-bar").style.width = `${Math.max(0, (timer.deadline - now) / limit) * 100}%`;
+    if (remainingSeconds(timer.deadline, now) === 0) onTimeout();
+  };
+  tick();
+  timer.id = setInterval(tick, 200);
+}
+
+function stopTimer() {
+  if (timer.id !== null) clearInterval(timer.id);
+  timer.id = null;
+}
+
+function onTimeout() {
+  stopTimer();
+  const result = timeoutCurrent(app.game);
+  if (result) renderFeedback(result);
 }
 
 function onChoice(index) {
   const result = answerCurrent(app.game, index);
-  if (result) renderFeedback(result);
+  if (result) {
+    stopTimer();
+    renderFeedback(result);
+  }
 }
 
 function renderFeedback(result) {
@@ -288,9 +346,12 @@ function renderFeedback(result) {
   const verdict = $("feedback-verdict");
   verdict.classList.toggle("is-correct", result.correct);
   verdict.classList.toggle("is-wrong", !result.correct);
+  const answerText = item.choices[item.correctIndex];
   verdict.textContent = result.correct
     ? "정답!"
-    : `오답 — 정답은 ${item.choices[item.correctIndex]}`;
+    : result.timedOut
+      ? `시간 초과 — 정답은 ${answerText}`
+      : `오답 — 정답은 ${answerText}`;
   $("feedback-explanation").textContent = item.explanation;
   const link = $("feedback-source");
   link.href = item.source.url;
@@ -307,6 +368,7 @@ function renderFeedback(result) {
 function onNext() {
   const g = app.game;
   if (isFinished(g)) {
+    stopTimer();
     renderResult();
     showScreen("screen-result");
   } else if (nextQuestion(g)) {
@@ -327,7 +389,7 @@ function renderResult() {
     const li = document.createElement("li");
     const mark = document.createElement("span");
     mark.className = r.correct ? "mark-correct" : "mark-wrong";
-    mark.textContent = r.correct ? "맞음" : "틀림";
+    mark.textContent = r.correct ? "맞음" : r.timedOut ? "시간 초과" : "틀림";
     li.append(`${text.length > 30 ? text.slice(0, 30) + "…" : text} — `, mark);
     list.appendChild(li);
   });

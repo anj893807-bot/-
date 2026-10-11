@@ -183,6 +183,31 @@ button:disabled {
   font-size: 0.9rem;
 }
 
+.timer {
+  margin-top: 14px;
+  color: var(--muted);
+}
+
+.timer-text strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-track {
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.timer-bar {
+  width: 100%;
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.2s linear;
+}
+
 .question {
   margin: 20px 0 16px;
   font-size: 1.2rem;
