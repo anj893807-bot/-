@@ -46,6 +46,8 @@ function validateQuestions(categories, questions) {
 // 모드마다 다른 규칙 (PRD 3장)
 const MODES = {
   practice: { name: "연습", timeLimit: null, hint: false, ranked: false },
+  speed: { name: "스피드", timeLimit: 15, hint: false, ranked: true },
+  hint: { name: "힌트", timeLimit: null, hint: true, ranked: true },
 };
 
 // Fisher–Yates. 입력 배열은 바꾸지 않고 새 배열을 돌려준다.
@@ -87,6 +89,11 @@ function createGame(modeId, categoryId, items, isRetry = false) {
     hintRemoved: [],
     isRetry,
   };
+}
+
+// 순위표에 남기는 판인지. 연습 모드와 다시 풀기 판은 남기지 않는다.
+function shouldRecord(game) {
+  return MODES[game.mode].ranked && !game.isRetry;
 }
 
 // 현재 문항에 답한다. 이미 답했으면 null (두 번 채점하지 않는다).
@@ -139,6 +146,13 @@ const app = {
   game: null,
 };
 
+// 시작 화면에서 모드 아래에 보여 주는 규칙 한 줄
+const MODE_RULES = {
+  practice: "시간 제한·힌트 없음 · 맞히면 1점 · 순위표에 기록되지 않음",
+  speed: "문항마다 15초 · 시간이 지나면 오답 · 맞히면 1점",
+  hint: "문항마다 힌트 1번(오답 2개 지움) · 힌트 쓰고 맞히면 0.5점",
+};
+
 const $ = id => document.getElementById(id);
 
 function showScreen(id) {
@@ -154,6 +168,29 @@ function categoryName(categoryId) {
 }
 
 function initApp() {
+  const modeList = $("mode-list");
+  Object.keys(MODES).forEach(id => {
+    const label = document.createElement("label");
+    label.className = "mode-option";
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "mode";
+    input.value = id;
+    input.checked = id === app.modeId;
+    const name = document.createElement("span");
+    name.className = "mode-name";
+    name.textContent = MODES[id].name;
+    const rule = document.createElement("span");
+    rule.className = "mode-rule";
+    rule.textContent = MODE_RULES[id];
+    label.append(input, name, rule);
+    modeList.appendChild(label);
+  });
+  modeList.addEventListener("change", e => {
+    if (e.target.name === "mode") selectMode(e.target.value);
+  });
+  selectMode(app.modeId);
+
   const list = $("category-list");
   CATEGORIES.forEach(c => {
     const btn = document.createElement("button");
@@ -187,8 +224,14 @@ function initApp() {
   showScreen("screen-start");
 }
 
+function selectMode(modeId) {
+  app.modeId = modeId;
+  $("unranked-note").hidden = MODES[modeId].ranked;
+}
+
 function showDataError(errors) {
   console.error("문항 데이터 오류", errors);
+  $("mode-list").hidden = true;
   $("category-list").hidden = true;
   const box = $("data-error");
   box.textContent = "";

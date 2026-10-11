@@ -142,4 +142,18 @@ test("10문항을 모두 맞히면 끝나고 10점", () => {
   assertEqual(totalScore(g.results), 10);
 });
 
+test("MODES 값", () => {
+  assertEqual(MODES.speed.timeLimit, 15);
+  assertEqual(MODES.hint.hint, true);
+  assertEqual(MODES.practice.ranked, false);
+});
+
+test("shouldRecord: 연습·다시 풀기는 기록 안 함", () => {
+  const items = buildRound(QUESTIONS, "science");
+  assertEqual(shouldRecord(createGame("practice", "science", items)), false);
+  assertEqual(shouldRecord(createGame("speed", "science", items)), true);
+  assertEqual(shouldRecord(createGame("hint", "science", items)), true);
+  assertEqual(shouldRecord(createGame("practice", "science", items, true)), false);
+});
+
 out.textContent += `SUMMARY passed=${passed} failed=${failed}\n`;
