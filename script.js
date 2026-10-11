@@ -164,6 +164,24 @@ function totalScore(results) {
   return results.reduce((sum, r) => sum + scoreResult(r), 0);
 }
 
+// 틀린 문항 id 목록. 시간 초과도 틀린 것으로 센다.
+function wrongQuestionIds(game) {
+  return game.results.filter(r => !r.correct).map(r => r.questionId);
+}
+
+// 다시 풀기 판: 해당 id 문항만 골라 문항 순서와 보기 순서를 새로 섞는다.
+function buildRetryRound(questions, ids, rng = Math.random) {
+  const picked = questions.filter(q => ids.includes(q.id));
+  return shuffle(picked, rng).map(q => toItem(q, rng));
+}
+
+function retrySummary(game) {
+  return {
+    correct: game.results.filter(r => r.correct).length,
+    total: game.items.length,
+  };
+}
+
 function formatScore(n) {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
@@ -174,6 +192,7 @@ const app = {
   modeId: "practice",
   categoryId: null,
   game: null,
+  originalGame: null, // 처음 판. 다시 풀기를 반복해도 바뀌지 않는다.
 };
 
 // 스피드 모드 타이머. 남은 시간은 마감 시각 기준으로 계산한다.
@@ -255,6 +274,7 @@ function initApp() {
       showScreen("screen-start");
     }
   });
+  $("btn-retry-wrong").addEventListener("click", startRetry);
   $("btn-again").addEventListener("click", () => startGame(app.modeId, app.categoryId));
   $("btn-result-home").addEventListener("click", () => showScreen("screen-start"));
 
@@ -288,6 +308,15 @@ function startGame(modeId, categoryId) {
   app.modeId = modeId;
   app.categoryId = categoryId;
   app.game = createGame(modeId, categoryId, buildRound(QUESTIONS, categoryId));
+  app.originalGame = app.game;
+  renderQuestion();
+  showScreen("screen-quiz");
+}
+
+// 방금 끝난 판(처음 판 또는 다시 풀기 판)에서 틀린 문항만 다시 푼다.
+function startRetry() {
+  const ids = wrongQuestionIds(app.game);
+  app.game = createGame(app.game.mode, app.game.category, buildRetryRound(QUESTIONS, ids), true);
   renderQuestion();
   showScreen("screen-quiz");
 }
@@ -296,6 +325,7 @@ function renderQuestion() {
   const g = app.game;
   const item = g.items[g.current];
   $("quiz-mode").textContent = MODES[g.mode].name;
+  $("quiz-retry-badge").hidden = !g.isRetry;
   $("quiz-progress").textContent = `${g.current + 1} / ${g.items.length}`;
   $("quiz-score").textContent = formatScore(totalScore(g.results));
   $("quiz-question").textContent = item.question;
@@ -404,9 +434,25 @@ function onNext() {
 
 function renderResult() {
   const g = app.game;
-  $("result-score").textContent = `${formatScore(totalScore(g.results))} / ${g.items.length}`;
-  $("result-meta").textContent = `${categoryName(g.category)} · ${MODES[g.mode].name}`;
-  $("result-unranked").hidden = MODES[g.mode].ranked;
+  // 위쪽 점수는 늘 처음 판 기준이다. 다시 풀기 결과는 아래에 따로 보여 준다.
+  const first = app.originalGame;
+  $("result-score").textContent = `${formatScore(totalScore(first.results))} / ${first.items.length}`;
+  $("result-meta").textContent = `${categoryName(first.category)} · ${MODES[first.mode].name}`;
+  $("result-unranked").hidden = MODES[first.mode].ranked;
+
+  const wrongCount = wrongQuestionIds(g).length;
+  const retryScore = $("result-retry-score");
+  retryScore.hidden = !g.isRetry;
+  if (g.isRetry) {
+    const { correct, total } = retrySummary(g);
+    retryScore.textContent = `다시 풀기 ${correct} / ${total}`;
+    if (wrongCount === 0) {
+      const done = document.createElement("strong");
+      done.textContent = "모두 맞혔어요!";
+      retryScore.append(document.createElement("br"), done);
+    }
+  }
+  $("btn-retry-wrong").hidden = g.mode !== "practice" || wrongCount === 0;
 
   const list = $("result-list");
   list.textContent = "";

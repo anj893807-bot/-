@@ -223,4 +223,23 @@ test("힌트 쓰고 맞히면 0.5점, 다음 문항에서 힌트 다시 가능",
   assertTrue(useHint(g) !== null);
 });
 
+test("틀린 문항만 다시 푼다", () => {
+  const g = createGame("practice", "science", buildRound(QUESTIONS, "science"));
+  for (let i = 0; i < 10; i++) {          // 짝수 번째만 맞힘
+    const it = g.items[g.current];
+    answerCurrent(g, i % 2 === 0 ? it.correctIndex : (it.correctIndex + 1) % 4);
+    nextQuestion(g);
+  }
+  const ids = wrongQuestionIds(g);
+  assertEqual(ids.length, 5);
+  const retry = buildRetryRound(QUESTIONS, ids);
+  assertEqual(retry.map(i => i.id).sort().join(), [...ids].sort().join());
+  const rg = createGame("practice", "science", retry, true);
+  assertEqual(shouldRecord(rg), false);
+  answerCurrent(rg, rg.items[0].correctIndex);
+  assertEqual(retrySummary(rg).correct, 1);
+  assertEqual(retrySummary(rg).total, 5);
+  assertEqual(totalScore(g.results), 5);   // 처음 판 점수는 그대로
+});
+
 out.textContent += `SUMMARY passed=${passed} failed=${failed}\n`;

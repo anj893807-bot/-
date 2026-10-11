@@ -27,6 +27,7 @@
     <section id="screen-quiz" class="screen" hidden>
       <header class="quiz-header">
         <span id="quiz-mode" class="badge"></span>
+        <span id="quiz-retry-badge" class="badge badge-retry" hidden>다시 풀기</span>
         <span id="quiz-progress"></span>
         <span class="quiz-score">점수 <strong id="quiz-score">0</strong></span>
       </header>
@@ -59,8 +60,10 @@
       <p id="result-score" class="result-score"></p>
       <p id="result-meta" class="result-meta"></p>
       <p id="result-unranked" class="note" hidden>순위표에 기록되지 않음</p>
+      <p id="result-retry-score" class="retry-score" hidden></p>
       <ol id="result-list" class="result-list"></ol>
       <div class="actions">
+        <button type="button" id="btn-retry-wrong" class="primary" hidden>틀린 문제 다시 풀기</button>
         <button type="button" id="btn-again" class="primary">다시 하기</button>
         <button type="button" id="btn-result-home" class="secondary">처음으로</button>
       </div>

@@ -208,6 +208,12 @@ button:disabled {
   transition: width 0.2s linear;
 }
 
+.badge-retry {
+  border-color: var(--note);
+  background: var(--note-bg);
+  color: var(--note);
+}
+
 .question {
   margin: 20px 0 16px;
   font-size: 1.2rem;
@@ -342,6 +348,16 @@ button:disabled {
 .result-meta {
   margin: 0;
   color: var(--muted);
+}
+
+.retry-score {
+  margin: 16px 0 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.retry-score strong {
+  color: var(--correct);
 }
 
 .result-list {
