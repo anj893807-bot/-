@@ -78,4 +78,68 @@ test("카테고리 문항이 9개면 카테고리 id가 나온다", () => {
   assertTrue(hasErrorFor(qs, "korean-history"));
 });
 
+// ---- Task 2: 판 만들기와 채점 ----
+
+const scienceGame = (modeId = "practice") =>
+  createGame(modeId, "science", buildRound(QUESTIONS, "science"));
+
+test("shuffle은 원소를 보존하고 입력을 바꾸지 않는다", () => {
+  const a = [1, 2, 3, 4];
+  const b = shuffle(a);
+  assertEqual(a.join(), "1,2,3,4");
+  assertEqual([...b].sort().join(), "1,2,3,4");
+});
+
+test("buildRound: 해당 카테고리 10문항, 정답 위치가 맞다", () => {
+  const items = buildRound(QUESTIONS, "science");
+  assertEqual(items.length, 10);
+  items.forEach(it => {
+    const q = QUESTIONS.find(q => q.id === it.id);
+    assertEqual(q.category, "science");
+    assertEqual(it.choices[it.correctIndex], q.choices[q.answer], it.id);
+  });
+});
+
+test("buildRound: rng가 다르면 순서가 다르다", () => {
+  const a = buildRound(QUESTIONS, "science", () => 0).map(i => i.id).join();
+  const b = buildRound(QUESTIONS, "science", () => 0.99).map(i => i.id).join();
+  assertTrue(a !== b);
+});
+
+test("scoreResult", () => {
+  assertEqual(scoreResult({ correct: false, usedHint: false, timedOut: true }), 0);
+  assertEqual(scoreResult({ correct: true, usedHint: true, timedOut: false }), 0.5);
+  assertEqual(scoreResult({ correct: true, usedHint: false, timedOut: false }), 1);
+});
+
+test("formatScore", () => {
+  assertEqual(formatScore(9), "9");
+  assertEqual(formatScore(7.5), "7.5");
+  assertEqual(formatScore(0), "0");
+});
+
+test("답은 한 번만 채점된다", () => {
+  const g = scienceGame();
+  const r = answerCurrent(g, g.items[0].correctIndex);
+  assertEqual(r.correct, true);
+  assertEqual(answerCurrent(g, 0), null);
+  assertEqual(g.results.length, 1);
+});
+
+test("답하기 전에는 다음으로 못 간다", () => {
+  const g = scienceGame();
+  assertEqual(nextQuestion(g), false);
+  assertEqual(g.current, 0);
+});
+
+test("10문항을 모두 맞히면 끝나고 10점", () => {
+  const g = scienceGame();
+  for (let i = 0; i < 10; i++) {
+    answerCurrent(g, g.items[g.current].correctIndex);
+    if (i < 9) assertEqual(nextQuestion(g), true);
+  }
+  assertEqual(isFinished(g), true);
+  assertEqual(totalScore(g.results), 10);
+});
+
 out.textContent += `SUMMARY passed=${passed} failed=${failed}\n`;
