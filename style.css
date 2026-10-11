@@ -262,6 +262,16 @@ button:disabled {
   content: "✗ ";
 }
 
+/* 힌트로 지운 보기: 자리는 그대로 두고 흐리게, 취소선 */
+.choice.is-removed {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.secondary:disabled {
+  opacity: 0.5;
+}
+
 .feedback {
   margin-top: 16px;
   padding: 14px 16px;

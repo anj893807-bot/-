@@ -187,4 +187,40 @@ test("시간 초과 뒤 답은 무시", () => {
   assertEqual(g.results.length, 1);
 });
 
+const hintGame = () => createGame("hint", "science", buildRound(QUESTIONS, "science"));
+
+test("힌트는 서로 다른 오답 2개를 지운다", () => {
+  const g = hintGame(), removed = useHint(g);
+  assertEqual(removed.length, 2);
+  assertTrue(removed[0] !== removed[1]);
+  assertTrue(!removed.includes(g.items[0].correctIndex));
+});
+
+test("힌트는 문항마다 한 번", () => {
+  const g = hintGame(); useHint(g);
+  assertEqual(useHint(g), null);
+});
+
+test("연습 모드와 답한 뒤에는 힌트 없음", () => {
+  const p = createGame("practice", "science", buildRound(QUESTIONS, "science"));
+  assertEqual(useHint(p), null);
+  const g = hintGame(); answerCurrent(g, g.items[0].correctIndex);
+  assertEqual(useHint(g), null);
+});
+
+test("지운 보기는 고를 수 없다", () => {
+  const g = hintGame(), removed = useHint(g);
+  assertEqual(answerCurrent(g, removed[0]), null);
+  assertEqual(g.results.length, 0);
+});
+
+test("힌트 쓰고 맞히면 0.5점, 다음 문항에서 힌트 다시 가능", () => {
+  const g = hintGame(); useHint(g);
+  const r = answerCurrent(g, g.items[0].correctIndex);
+  assertEqual(r.usedHint, true);
+  assertEqual(scoreResult(r), 0.5);
+  nextQuestion(g);
+  assertTrue(useHint(g) !== null);
+});
+
 out.textContent += `SUMMARY passed=${passed} failed=${failed}\n`;

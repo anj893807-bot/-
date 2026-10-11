@@ -96,20 +96,30 @@ function shouldRecord(game) {
   return MODES[game.mode].ranked && !game.isRetry;
 }
 
-// 현재 문항에 답한다. 이미 답했으면 null (두 번 채점하지 않는다).
+// 현재 문항에 답한다. 이미 답했거나 힌트로 지운 보기면 null (두 번 채점하지 않는다).
 function answerCurrent(game, choiceIndex) {
-  if (game.answered) return null;
+  if (game.answered || game.hintRemoved.includes(choiceIndex)) return null;
   const item = game.items[game.current];
   const result = {
     questionId: item.id,
     correct: choiceIndex === item.correctIndex,
-    usedHint: false,
+    usedHint: game.hintRemoved.length > 0,
     timedOut: false,
     chosenIndex: choiceIndex,
   };
   game.results.push(result);
   game.answered = true;
   return result;
+}
+
+// 힌트 모드: 오답 3개 중 2개를 무작위로 지우고 그 인덱스를 돌려준다.
+// 힌트가 없는 모드이거나, 이 문항에서 이미 썼거나, 이미 답했으면 null.
+function useHint(game, rng = Math.random) {
+  if (!MODES[game.mode].hint || game.hintRemoved.length > 0 || game.answered) return null;
+  const item = game.items[game.current];
+  const wrong = item.choices.map((_, i) => i).filter(i => i !== item.correctIndex);
+  game.hintRemoved = shuffle(wrong, rng).slice(0, 2);
+  return game.hintRemoved.slice();
 }
 
 // 스피드 모드: 마감 시각까지 남은 초(올림). 0보다 작아지지 않는다.
@@ -237,6 +247,7 @@ function initApp() {
     const btn = e.target.closest("button.choice");
     if (btn) onChoice(Number(btn.dataset.index));
   });
+  $("btn-hint").addEventListener("click", onHint);
   $("btn-next").addEventListener("click", onNext);
   $("btn-home").addEventListener("click", () => {
     if (confirm("처음으로 돌아갈까요? 이번 판은 기록되지 않아요.")) {
@@ -291,10 +302,13 @@ function renderQuestion() {
   document.querySelectorAll("#choice-list .choice").forEach((btn, i) => {
     btn.textContent = item.choices[i];
     btn.disabled = false;
-    btn.classList.remove("is-correct", "is-wrong");
+    btn.classList.remove("is-correct", "is-wrong", "is-removed");
   });
   $("feedback").hidden = true;
   $("btn-next").hidden = true;
+  const hint = $("btn-hint");
+  hint.hidden = !MODES[g.mode].hint;
+  hint.disabled = false;
 
   const timed = MODES[g.mode].timeLimit !== null;
   $("quiz-timer-box").hidden = !timed;
@@ -324,6 +338,17 @@ function onTimeout() {
   stopTimer();
   const result = timeoutCurrent(app.game);
   if (result) renderFeedback(result);
+}
+
+function onHint() {
+  const removed = useHint(app.game);
+  if (!removed) return;
+  const buttons = document.querySelectorAll("#choice-list .choice");
+  removed.forEach(i => {
+    buttons[i].disabled = true;
+    buttons[i].classList.add("is-removed");
+  });
+  $("btn-hint").disabled = true;
 }
 
 function onChoice(index) {
@@ -357,6 +382,7 @@ function renderFeedback(result) {
   link.href = item.source.url;
   link.textContent = `출처: ${item.source.title}`;
   $("feedback").hidden = false;
+  $("btn-hint").disabled = true;
 
   $("quiz-score").textContent = formatScore(totalScore(g.results));
   const next = $("btn-next");
@@ -391,6 +417,7 @@ function renderResult() {
     mark.className = r.correct ? "mark-correct" : "mark-wrong";
     mark.textContent = r.correct ? "맞음" : r.timedOut ? "시간 초과" : "틀림";
     li.append(`${text.length > 30 ? text.slice(0, 30) + "…" : text} — `, mark);
+    if (r.usedHint) li.append(" (힌트)");
     list.appendChild(li);
   });
 }
