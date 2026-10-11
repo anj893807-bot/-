@@ -63,6 +63,13 @@ button:disabled {
 
 /* ---- 시작 화면 ---- */
 
+.student-info {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .mode-list {
   display: flex;
   flex-direction: column;
