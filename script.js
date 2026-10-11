@@ -133,4 +133,161 @@ function formatScore(n) {
 
 // ===== 화면 =====
 
+const app = {
+  modeId: "practice",
+  categoryId: null,
+  game: null,
+};
+
+const $ = id => document.getElementById(id);
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => {
+    s.hidden = s.id !== id;
+  });
+  window.scrollTo(0, 0);
+}
+
+function categoryName(categoryId) {
+  const c = CATEGORIES.find(c => c.id === categoryId);
+  return c ? c.name : categoryId;
+}
+
+function initApp() {
+  const list = $("category-list");
+  CATEGORIES.forEach(c => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.dataset.category = c.id;
+    btn.textContent = c.name;
+    list.appendChild(btn);
+  });
+
+  const errors = validateQuestions(CATEGORIES, QUESTIONS);
+  if (errors.length > 0) {
+    showDataError(errors);
+    return;
+  }
+
+  list.addEventListener("click", e => {
+    const btn = e.target.closest("button[data-category]");
+    if (btn) startGame(app.modeId, btn.dataset.category);
+  });
+  $("choice-list").addEventListener("click", e => {
+    const btn = e.target.closest("button.choice");
+    if (btn) onChoice(Number(btn.dataset.index));
+  });
+  $("btn-next").addEventListener("click", onNext);
+  $("btn-home").addEventListener("click", () => {
+    if (confirm("처음으로 돌아갈까요? 이번 판은 기록되지 않아요.")) showScreen("screen-start");
+  });
+  $("btn-again").addEventListener("click", () => startGame(app.modeId, app.categoryId));
+  $("btn-result-home").addEventListener("click", () => showScreen("screen-start"));
+
+  showScreen("screen-start");
+}
+
+function showDataError(errors) {
+  console.error("문항 데이터 오류", errors);
+  $("category-list").hidden = true;
+  const box = $("data-error");
+  box.textContent = "";
+  const title = document.createElement("strong");
+  title.textContent = "문항 데이터 오류";
+  const ul = document.createElement("ul");
+  errors.forEach(err => {
+    const li = document.createElement("li");
+    li.textContent = err;
+    ul.appendChild(li);
+  });
+  box.append(title, ul);
+  box.hidden = false;
+}
+
+function startGame(modeId, categoryId) {
+  app.modeId = modeId;
+  app.categoryId = categoryId;
+  app.game = createGame(modeId, categoryId, buildRound(QUESTIONS, categoryId));
+  renderQuestion();
+  showScreen("screen-quiz");
+}
+
+function renderQuestion() {
+  const g = app.game;
+  const item = g.items[g.current];
+  $("quiz-mode").textContent = MODES[g.mode].name;
+  $("quiz-progress").textContent = `${g.current + 1} / ${g.items.length}`;
+  $("quiz-score").textContent = formatScore(totalScore(g.results));
+  $("quiz-question").textContent = item.question;
+  document.querySelectorAll("#choice-list .choice").forEach((btn, i) => {
+    btn.textContent = item.choices[i];
+    btn.disabled = false;
+    btn.classList.remove("is-correct", "is-wrong");
+  });
+  $("feedback").hidden = true;
+  $("btn-next").hidden = true;
+}
+
+function onChoice(index) {
+  const result = answerCurrent(app.game, index);
+  if (result) renderFeedback(result);
+}
+
+function renderFeedback(result) {
+  const g = app.game;
+  const item = g.items[g.current];
+  document.querySelectorAll("#choice-list .choice").forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === item.correctIndex) btn.classList.add("is-correct");
+    else if (i === result.chosenIndex) btn.classList.add("is-wrong");
+  });
+
+  const verdict = $("feedback-verdict");
+  verdict.classList.toggle("is-correct", result.correct);
+  verdict.classList.toggle("is-wrong", !result.correct);
+  verdict.textContent = result.correct
+    ? "정답!"
+    : `오답 — 정답은 ${item.choices[item.correctIndex]}`;
+  $("feedback-explanation").textContent = item.explanation;
+  const link = $("feedback-source");
+  link.href = item.source.url;
+  link.textContent = `출처: ${item.source.title}`;
+  $("feedback").hidden = false;
+
+  $("quiz-score").textContent = formatScore(totalScore(g.results));
+  const next = $("btn-next");
+  next.textContent = isFinished(g) ? "결과 보기" : "다음";
+  next.hidden = false;
+  next.focus();
+}
+
+function onNext() {
+  const g = app.game;
+  if (isFinished(g)) {
+    renderResult();
+    showScreen("screen-result");
+  } else if (nextQuestion(g)) {
+    renderQuestion();
+  }
+}
+
+function renderResult() {
+  const g = app.game;
+  $("result-score").textContent = `${formatScore(totalScore(g.results))} / ${g.items.length}`;
+  $("result-meta").textContent = `${categoryName(g.category)} · ${MODES[g.mode].name}`;
+  $("result-unranked").hidden = MODES[g.mode].ranked;
+
+  const list = $("result-list");
+  list.textContent = "";
+  g.results.forEach((r, i) => {
+    const text = g.items[i].question;
+    const li = document.createElement("li");
+    const mark = document.createElement("span");
+    mark.className = r.correct ? "mark-correct" : "mark-wrong";
+    mark.textContent = r.correct ? "맞음" : "틀림";
+    li.append(`${text.length > 30 ? text.slice(0, 30) + "…" : text} — `, mark);
+    list.appendChild(li);
+  });
+}
+
 if (document.getElementById("app")) initApp();

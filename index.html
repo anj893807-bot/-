@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>상식 퀴즈</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+    <!-- 시작 화면 -->
+    <section id="screen-start" class="screen">
+      <h1>상식 퀴즈</h1>
+      <p class="lead">카테고리를 고르면 10문제가 시작돼요.</p>
+      <div id="category-list" class="category-list">
+        <!-- script.js가 CATEGORIES로 버튼을 채운다 -->
+      </div>
+      <p id="unranked-note" class="note">순위표에 기록되지 않음</p>
+      <div id="data-error" class="data-error" role="alert" hidden></div>
+    </section>
+
+    <!-- 퀴즈 화면 -->
+    <section id="screen-quiz" class="screen" hidden>
+      <header class="quiz-header">
+        <span id="quiz-mode" class="badge"></span>
+        <span id="quiz-progress"></span>
+        <span class="quiz-score">점수 <strong id="quiz-score">0</strong></span>
+      </header>
+      <h2 id="quiz-question" class="question"></h2>
+      <div id="choice-list" class="choice-list">
+        <button type="button" class="choice" data-index="0"></button>
+        <button type="button" class="choice" data-index="1"></button>
+        <button type="button" class="choice" data-index="2"></button>
+        <button type="button" class="choice" data-index="3"></button>
+      </div>
+      <div id="feedback" class="feedback" aria-live="polite" hidden>
+        <p id="feedback-verdict" class="verdict"></p>
+        <p id="feedback-explanation"></p>
+        <p class="source"><a id="feedback-source" target="_blank" rel="noopener"></a></p>
+      </div>
+      <div class="actions">
+        <button type="button" id="btn-next" class="primary" hidden>다음</button>
+        <button type="button" id="btn-home" class="secondary">처음으로</button>
+      </div>
+    </section>
+
+    <!-- 결과 화면 -->
+    <section id="screen-result" class="screen" hidden>
+      <h1>결과</h1>
+      <p id="result-score" class="result-score"></p>
+      <p id="result-meta" class="result-meta"></p>
+      <p id="result-unranked" class="note" hidden>순위표에 기록되지 않음</p>
+      <ol id="result-list" class="result-list"></ol>
+      <div class="actions">
+        <button type="button" id="btn-again" class="primary">다시 하기</button>
+        <button type="button" id="btn-result-home" class="secondary">처음으로</button>
+      </div>
+    </section>
+
+    <!-- 순위표 화면 (3단계) -->
+    <section id="screen-board" class="screen" hidden></section>
+  </main>
+
+  <script src="questions.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
